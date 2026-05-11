@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customers - StokManager</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">📦</div>
+      <h2>UD.DIANA</h2>
+      <span>Sistem Manajemen Stok</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Menu Utama</div>
+      <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="products.html" class="nav-item"><span class="nav-icon">📦</span> Produk</a>
+      <a href="customers.html" class="nav-item active"><span class="nav-icon">👥</span> Customers</a>
+      <div class="nav-label">Transaksi</div>
+      <a href="invoices.html" class="nav-item"><span class="nav-icon">🧾</span> Faktur Penjualan</a>
+      <a href="verify-invoices.html" class="nav-item"><span class="nav-icon">✅</span> Verifikasi Faktur</a>
+      <a href="purchases.html" class="nav-item"><span class="nav-icon">🛒</span> Pembelian Barang</a>
+      <a href="stock-out.html" class="nav-item"><span class="nav-icon">📤</span> Keluar Barang</a>
+      <div class="nav-label">Laporan</div>
+      <a href="reports.html" class="nav-item"><span class="nav-icon">📊</span> Laporan Stok</a>
+      <a href="profit-loss.html" class="nav-item"><span class="nav-icon">💹</span> Laba Rugi</a>
+      <div class="nav-label">Admin</div>
+      <a href="settings.html" class="nav-item"><span class="nav-icon">⚙️</span> Pengaturan</a>
+    </nav>
+    <div class="sidebar-footer">© 2025 StokManager</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>Customers</h1>
+        <p>Kelola data pelanggan</p>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary" onclick="openAddCustomer()">+ Tambah Customer</button>
+        <div class="user-avatar">A</div>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="filter-bar">
+        <div class="search-input-wrap" style="flex:1;max-width:360px">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="Cari nama, toko, telepon..." oninput="handleSearch()">
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="loadCustomers()">🔄 Refresh</button>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3>Daftar Customer <span id="customer-count" class="badge badge-info" style="margin-left:8px">0</span></h3>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nama</th>
+                <th>Nama Toko</th>
+                <th>Telepon</th>
+                <th>Alamat</th>
+                <th>Tgl Daftar</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="customers-table">
+              <tr><td colspan="7" class="text-center text-muted" style="padding:40px">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- MODAL ADD/EDIT CUSTOMER -->
+<div class="modal-overlay" id="modal-customer">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-customer-title">Tambah Customer</h3>
+      <button class="modal-close" onclick="closeModal('modal-customer')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="customer-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nama Customer *</label>
+          <input type="text" id="customer-name" placeholder="Nama lengkap">
+        </div>
+        <div class="form-group">
+          <label>Nama Toko</label>
+          <input type="text" id="customer-store" placeholder="Nama toko / usaha">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Nomor Telepon</label>
+        <input type="tel" id="customer-phone" placeholder="08xx-xxxx-xxxx">
+      </div>
+      <div class="form-group">
+        <label>Alamat</label>
+        <textarea id="customer-address" placeholder="Alamat lengkap" style="min-height:70px"></textarea>
+      </div>
+      <div class="form-group mb-0">
+        <label>Catatan</label>
+        <textarea id="customer-notes" placeholder="Catatan tambahan (opsional)" style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-customer')">Batal</button>
+      <button class="btn btn-primary" id="btn-save-customer" onclick="saveCustomer()">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  let allCustomers = [];
+  const handleSearch = debounce(() => renderCustomers(), 350);
+
+  async function loadCustomers() {
+    const { data, error } = await supabase
+      .from('customers').select('*').order('name');
+    if (error) { showToast('Gagal memuat customers: ' + error.message, 'error'); return; }
+    allCustomers = data || [];
+    renderCustomers();
+  }
+
+  function renderCustomers() {
+    const search = document.getElementById('search-input').value.toLowerCase();
+    const filtered = allCustomers.filter(c =>
+      !search ||
+      c.name.toLowerCase().includes(search) ||
+      (c.store_name || '').toLowerCase().includes(search) ||
+      (c.phone || '').includes(search)
+    );
+
+    document.getElementById('customer-count').textContent = filtered.length;
+    const tbody = document.getElementById('customers-table');
+
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><h4>Belum ada customer</h4><p>Tambah customer baru</p></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map((c, i) => `
+      <tr>
+        <td class="text-muted">${i + 1}</td>
+        <td><strong>${escapeHtml(c.name)}</strong>${c.notes ? `<br><small class="text-muted">${escapeHtml(c.notes.substring(0,40))}</small>` : ''}</td>
+        <td>${c.store_name ? `<span class="badge badge-info">${escapeHtml(c.store_name)}</span>` : '—'}</td>
+        <td>${escapeHtml(c.phone || '—')}</td>
+        <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(c.address || '—')}</td>
+        <td class="text-muted">${formatDate(c.created_at)}</td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-ghost btn-sm" onclick="openEditCustomer('${c.id}')">✏️ Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteCustomer('${c.id}','${escapeHtml(c.name)}')">🗑</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  function openAddCustomer() {
+    document.getElementById('customer-id').value = '';
+    document.getElementById('customer-name').value = '';
+    document.getElementById('customer-store').value = '';
+    document.getElementById('customer-phone').value = '';
+    document.getElementById('customer-address').value = '';
+    document.getElementById('customer-notes').value = '';
+    document.getElementById('modal-customer-title').textContent = 'Tambah Customer';
+    openModal('modal-customer');
+  }
+
+  function openEditCustomer(id) {
+    const c = allCustomers.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('customer-id').value = c.id;
+    document.getElementById('customer-name').value = c.name;
+    document.getElementById('customer-store').value = c.store_name || '';
+    document.getElementById('customer-phone').value = c.phone || '';
+    document.getElementById('customer-address').value = c.address || '';
+    document.getElementById('customer-notes').value = c.notes || '';
+    document.getElementById('modal-customer-title').textContent = 'Edit Customer';
+    openModal('modal-customer');
+  }
+
+  async function saveCustomer() {
+    const btn = document.getElementById('btn-save-customer');
+    const id = document.getElementById('customer-id').value;
+    const name = document.getElementById('customer-name').value.trim();
+    if (!name) { showToast('Nama customer wajib diisi', 'error'); return; }
+
+    const payload = {
+      name,
+      store_name: document.getElementById('customer-store').value.trim() || null,
+      phone: document.getElementById('customer-phone').value.trim() || null,
+      address: document.getElementById('customer-address').value.trim() || null,
+      notes: document.getElementById('customer-notes').value.trim() || null,
+    };
+
+    setLoading(btn, true);
+    const { error } = id
+      ? await supabase.from('customers').update(payload).eq('id', id)
+      : await supabase.from('customers').insert(payload);
+    setLoading(btn, false);
+
+    if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
+    showToast(id ? 'Customer diperbarui' : 'Customer ditambahkan');
+    closeModal('modal-customer');
+    loadCustomers();
+  }
+
+  async function deleteCustomer(id, name) {
+    if (!showConfirm(`Hapus customer "${name}"?`)) return;
+    const { error } = await supabase.from('customers').delete().eq('id', id);
+    if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
+    showToast(`Customer "${name}" dihapus`);
+    loadCustomers();
+  }
+
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); });
+  });
+
+  (async () => { const auth = await requireAdmin(); if (!auth) return; loadCustomers(); })();
+</script>
+</body>
+</html>

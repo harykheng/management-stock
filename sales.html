@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales - UD.DIANA</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --bg: #f1f5f9;
+      --card: #fff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* TOP NAV */
+    .topnav {
+      background: #0f172a;
+      color: #fff;
+      padding: 0 16px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topnav-brand { display: flex; align-items: center; gap: 10px; }
+    .topnav-brand .icon { font-size: 20px; }
+    .topnav-brand h1 { font-size: 16px; font-weight: 700; }
+    .topnav-brand span { font-size: 11px; color: #94a3b8; }
+    .topnav-right { display: flex; align-items: center; gap: 8px; }
+    .user-chip {
+      background: rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 4px 12px 4px 8px;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px;
+    }
+    .user-chip .avatar {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+    }
+    .btn-signout {
+      background: rgba(255,255,255,0.08);
+      border: none; color: #94a3b8;
+      padding: 6px 10px; border-radius: 6px;
+      font-size: 12px; cursor: pointer;
+    }
+
+    /* TABS */
+    .tabs {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      position: sticky;
+      top: 56px;
+      z-index: 99;
+    }
+    .tab-btn {
+      flex: 1; padding: 14px 8px;
+      border: none; background: none;
+      font-size: 13px; font-weight: 600;
+      color: var(--muted); cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color .2s, border-color .2s;
+    }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    /* CONTENT */
+    .tab-content { display: none; padding: 16px; }
+    .tab-content.active { display: block; }
+
+    /* CARDS */
+    .card { background: var(--card); border-radius: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); overflow: hidden; margin-bottom: 16px; }
+    .card-header { padding: 14px 16px; border-bottom: 1px solid var(--border); font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: space-between; }
+    .card-body { padding: 16px; }
+
+    /* FORM */
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 10px 12px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: 14px; color: var(--text);
+      outline: none; transition: border-color .2s;
+      background: #fff;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--primary);
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* PRICE MODE */
+    .price-mode-group { display: flex; gap: 6px; margin-bottom: 14px; }
+    .price-mode-btn {
+      flex: 1; padding: 8px 4px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      background: #fff; font-size: 12px; font-weight: 600;
+      color: var(--muted); cursor: pointer; text-align: center;
+      transition: all .2s;
+    }
+    .price-mode-btn.active { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
+
+    /* ITEMS */
+    .items-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    .item-row {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .item-row select { margin-bottom: 8px; }
+    .item-row-nums { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: end; }
+    .item-row-nums label { font-size: 11px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
+    .item-row-nums input { padding: 8px 10px; font-size: 13px; }
+    .item-subtotal { font-size: 12px; color: var(--primary); font-weight: 700; margin-top: 8px; text-align: right; }
+    .btn-remove-item { float: right; background: none; border: none; color: #ef4444; font-size: 18px; cursor: pointer; line-height: 1; padding: 0; }
+
+    /* TOTALS */
+    .totals-box { background: #f8fafc; border-radius: 8px; padding: 12px; margin-top: 4px; }
+    .totals-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+    .totals-row.grand { font-weight: 700; font-size: 16px; color: var(--primary); border-top: 1px solid var(--border); margin-top: 6px; padding-top: 8px; }
+
+    /* BUTTONS */
+    .btn { padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: opacity .2s; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+    .btn-ghost { background: #f1f5f9; color: #475569; }
+    .btn-full { width: 100%; padding: 13px; font-size: 15px; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* INVOICE LIST */
+    .invoice-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 10px;
+      background: #fff;
+    }
+    .invoice-item-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+    .invoice-num { font-size: 13px; font-weight: 700; color: var(--primary); }
+    .invoice-date { font-size: 11px; color: var(--muted); }
+    .invoice-customer { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+    .invoice-total { font-size: 15px; font-weight: 700; }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-success { background: #dcfce7; color: #15803d; }
+    .badge-danger { background: #fee2e2; color: #b91c1c; }
+    .badge-info { background: #dbeafe; color: #1d4ed8; }
+    .badge-secondary { background: #f1f5f9; color: #475569; }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state h4 { font-size: 15px; margin-bottom: 4px; }
+    .empty-state p { font-size: 13px; }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 200;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 20px 16px 32px;
+    }
+    .modal-handle {
+      width: 40px; height: 4px;
+      background: #e2e8f0; border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+    .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+
+    /* TOAST */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1e293b; color: #fff;
+      padding: 10px 20px; border-radius: 24px;
+      font-size: 13px; font-weight: 500;
+      transition: transform .3s; z-index: 999;
+      white-space: nowrap;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.error { background: #dc2626; }
+
+    .reject-reason-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #b91c1c;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="topnav-brand">
+    <span class="icon">📦</span>
+    <div>
+      <h1>UD.DIANA</h1>
+    </div>
+  </div>
+  <div class="topnav-right">
+    <div class="user-chip">
+      <div class="avatar" id="user-initial">?</div>
+      <span id="user-name-nav">...</span>
+    </div>
+    <button class="btn-signout" onclick="doSignOut()">Keluar</button>
+  </div>
+</nav>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('tab-new')">+ Buat Faktur</button>
+  <button class="tab-btn" onclick="switchTab('tab-history')">📋 Riwayat</button>
+</div>
+
+<!-- TAB: BUAT FAKTUR -->
+<div class="tab-content active" id="tab-new">
+
+  <div class="card">
+    <div class="card-header">Info Faktur</div>
+    <div class="card-body">
+      <div class="form-group">
+        <label>Customer</label>
+        <select id="inv-customer">
+          <option value="">-- Pilih Customer --</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tanggal</label>
+          <input type="date" id="inv-date">
+        </div>
+        <div class="form-group">
+          <label>Termin</label>
+          <select id="inv-term">
+            <option value="cod">COD</option>
+            <option value="7">7 Hari</option>
+            <option value="15">15 Hari</option>
+            <option value="30">30 Hari</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Catatan (opsional)</label>
+        <textarea id="inv-notes" rows="2" placeholder="Catatan tambahan..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      Mode Harga
+    </div>
+    <div class="card-body" style="padding-top:12px;padding-bottom:12px">
+      <div class="price-mode-group">
+        <button class="price-mode-btn active" onclick="setPriceMode('normal', this)">Harga Biasa</button>
+        <button class="price-mode-btn" onclick="setPriceMode('shopee', this)">Shopee</button>
+        <button class="price-mode-btn" onclick="setPriceMode('custom', this)">Custom</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      Items
+      <button class="btn btn-ghost btn-sm" onclick="addItem()">+ Tambah</button>
+    </div>
+    <div class="card-body">
+      <div class="items-list" id="items-list"></div>
+
+      <div class="totals-box">
+        <div class="totals-row"><span>Subtotal</span><span id="t-subtotal">Rp 0</span></div>
+        <div class="totals-row grand"><span>TOTAL</span><span id="t-total">Rp 0</span></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary btn-full" id="btn-submit" onclick="submitInvoice()">Kirim Faktur</button>
+  <p style="font-size:11px;color:#94a3b8;text-align:center;margin-top:8px">Faktur akan menunggu verifikasi admin</p>
+</div>
+
+<!-- TAB: RIWAYAT -->
+<div class="tab-content" id="tab-history">
+  <div style="margin-bottom:12px">
+    <input type="text" id="search-history" placeholder="🔍 Cari nomor / customer..." oninput="filterHistory()" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;outline:none">
+  </div>
+  <div id="history-list">
+    <div class="empty-state"><div class="icon">📋</div><h4>Memuat...</h4></div>
+  </div>
+</div>
+
+<!-- MODAL: DETAIL FAKTUR -->
+<div class="modal-overlay" id="modal-detail">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="detail-title">Detail Faktur</div>
+    <div id="detail-body"></div>
+    <button class="btn btn-ghost btn-full" style="margin-top:16px" onclick="closeModal('modal-detail')">Tutup</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script>
+  let currentUser = null;
+  let products = [];
+  let customers = [];
+  let priceMode = 'normal';
+  let itemCount = 0;
+  let allInvoices = [];
+
+  async function init() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+
+    const { data: profile } = await supabase.from('user_profiles').select('*').eq('id', session.user.id).single();
+    if (!profile || !profile.is_active) { await supabase.auth.signOut(); window.location.href = 'login.html'; return; }
+
+    currentUser = { session, profile };
+
+    document.getElementById('user-initial').textContent = profile.name.charAt(0).toUpperCase();
+    document.getElementById('user-name-nav').textContent = profile.name;
+
+    document.getElementById('inv-date').value = new Date().toISOString().split('T')[0];
+
+    await Promise.all([loadProducts(), loadCustomers(), loadHistory()]);
+    addItem();
+  }
+
+  async function loadProducts() {
+    const { data } = await supabase.from('products').select('id,name,sku,price,price_shopee,cost,stock_quantity,unit').eq('is_active', true).order('name');
+    products = data || [];
+  }
+
+  async function loadCustomers() {
+    const { data } = await supabase.from('customers').select('id,name,store_name').order('name');
+    customers = data || [];
+    const sel = document.getElementById('inv-customer');
+    sel.innerHTML = '<option value="">-- Pilih Customer --</option>' +
+      customers.map(c => `<option value="${c.id}">${escapeHtml(c.name)}${c.store_name ? ' - ' + escapeHtml(c.store_name) : ''}</option>`).join('');
+  }
+
+  async function loadHistory() {
+    const { data } = await supabase
+      .from('invoices')
+      .select('id,invoice_number,invoice_date,customer_id,store_name,total_amount,status,verification_status,reject_reason,notes,payment_term,invoice_items(id,product_id,quantity,unit_price,subtotal,products(name))')
+      .eq('created_by_id', currentUser.session.user.id)
+      .order('created_at', { ascending: false });
+    allInvoices = data || [];
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const search = (document.getElementById('search-history').value || '').toLowerCase();
+    const filtered = allInvoices.filter(inv =>
+      !search ||
+      (inv.invoice_number || '').toLowerCase().includes(search) ||
+      (inv.store_name || '').toLowerCase().includes(search)
+    );
+
+    const el = document.getElementById('history-list');
+    if (!filtered.length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">📋</div><h4>Belum ada faktur</h4><p>Buat faktur baru di tab "Buat Faktur"</p></div>`;
+      return;
+    }
+
+    el.innerHTML = filtered.map(inv => {
+      const vstatus = inv.verification_status;
+      let vbadge = '';
+      if (!vstatus) vbadge = `<span class="badge badge-secondary">Draft</span>`;
+      else if (vstatus === 'pending') vbadge = `<span class="badge badge-warning">Menunggu</span>`;
+      else if (vstatus === 'approved') vbadge = `<span class="badge badge-success">Disetujui</span>`;
+      else if (vstatus === 'rejected') vbadge = `<span class="badge badge-danger">Ditolak</span>`;
+
+      return `<div class="invoice-item" onclick="showDetail('${inv.id}')">
+        <div class="invoice-item-top">
+          <div>
+            <div class="invoice-num">${escapeHtml(inv.invoice_number || '—')}</div>
+            <div class="invoice-date">${formatDate(inv.invoice_date)}</div>
+          </div>
+          ${vbadge}
+        </div>
+        <div class="invoice-customer">${escapeHtml(inv.store_name || '—')}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <div class="invoice-total">${formatCurrency(inv.total_amount)}</div>
+          <span class="badge ${inv.status === 'paid' ? 'badge-success' : 'badge-warning'}">${inv.status === 'paid' ? 'Lunas' : 'Belum Lunas'}</span>
+        </div>
+        ${inv.reject_reason ? `<div class="reject-reason-box">❌ Ditolak: ${escapeHtml(inv.reject_reason)}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function filterHistory() { renderHistory(); }
+
+  function showDetail(id) {
+    const inv = allInvoices.find(x => x.id === id);
+    if (!inv) return;
+    document.getElementById('detail-title').textContent = inv.invoice_number || 'Detail Faktur';
+    const items = inv.invoice_items || [];
+    document.getElementById('detail-body').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between"><span style="color:#64748b">Tanggal</span><span>${formatDate(inv.invoice_date)}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:#64748b">Customer</span><span>${escapeHtml(inv.store_name || '—')}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:#64748b">Termin</span><span>${inv.payment_term || '—'}</span></div>
+        ${inv.notes ? `<div style="display:flex;justify-content:space-between"><span style="color:#64748b">Catatan</span><span>${escapeHtml(inv.notes)}</span></div>` : ''}
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:1px solid #e2e8f0">
+          <th style="text-align:left;padding:6px 0">Produk</th>
+          <th style="text-align:right;padding:6px 0">Qty</th>
+          <th style="text-align:right;padding:6px 0">Harga</th>
+          <th style="text-align:right;padding:6px 0">Subtotal</th>
+        </tr></thead>
+        <tbody>${items.map(it => `<tr style="border-bottom:1px solid #f1f5f9">
+          <td style="padding:6px 0">${escapeHtml(it.products?.name || '—')}</td>
+          <td style="text-align:right;padding:6px 0">${it.quantity}</td>
+          <td style="text-align:right;padding:6px 0">${formatCurrency(it.unit_price)}</td>
+          <td style="text-align:right;padding:6px 0">${formatCurrency(it.subtotal)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      <div style="text-align:right;font-weight:700;font-size:16px;color:#2563eb;margin-top:12px">${formatCurrency(inv.total_amount)}</div>
+      ${inv.reject_reason ? `<div class="reject-reason-box" style="margin-top:12px">❌ Alasan ditolak: ${escapeHtml(inv.reject_reason)}</div>` : ''}
+    `;
+    openModal('modal-detail');
+  }
+
+  function setPriceMode(mode, btn) {
+    priceMode = mode;
+    document.querySelectorAll('.price-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.item-price-input').forEach(input => {
+      const row = input.closest('.item-row');
+      const sel = row.querySelector('.item-product-sel');
+      if (sel.value) updateItemPrice(sel);
+    });
+  }
+
+  function addItem() {
+    const id = ++itemCount;
+    const div = document.createElement('div');
+    div.className = 'item-row';
+    div.id = 'item-' + id;
+    div.innerHTML = `
+      <button class="btn-remove-item" onclick="removeItem(${id})">×</button>
+      <select class="item-product-sel" onchange="updateItemPrice(this)">
+        <option value="">-- Pilih Produk --</option>
+        ${products.map(p => `<option value="${p.id}" data-price="${p.price}" data-shopee="${p.price_shopee || p.price}" data-cost="${p.cost || 0}" data-stock="${p.stock_quantity}" data-unit="${escapeHtml(p.unit || 'pcs')}">${escapeHtml(p.name)} (Stok: ${p.stock_quantity})</option>`).join('')}
+      </select>
+      <div class="item-row-nums">
+        <div>
+          <label>Qty</label>
+          <input type="number" class="item-qty-input" value="1" min="1" oninput="recalcItem(${id})">
+        </div>
+        <div>
+          <label>Harga</label>
+          <input type="number" class="item-price-input" value="0" min="0" oninput="recalcItem(${id})">
+        </div>
+        <div>
+          <label>Satuan</label>
+          <input type="text" class="item-unit-input" value="pcs" readonly style="background:#f8fafc;color:#64748b">
+        </div>
+      </div>
+      <div class="item-subtotal" id="sub-${id}">Rp 0</div>
+    `;
+    document.getElementById('items-list').appendChild(div);
+    recalcTotal();
+  }
+
+  function removeItem(id) {
+    const el = document.getElementById('item-' + id);
+    if (el) el.remove();
+    recalcTotal();
+  }
+
+  function updateItemPrice(sel) {
+    const row = sel.closest('.item-row');
+    const opt = sel.options[sel.selectedIndex];
+    if (!opt.value) return;
+    let price = 0;
+    if (priceMode === 'normal') price = parseFloat(opt.dataset.price) || 0;
+    else if (priceMode === 'shopee') price = parseFloat(opt.dataset.shopee) || 0;
+    else price = parseFloat(opt.dataset.price) || 0;
+    row.querySelector('.item-price-input').value = price;
+    row.querySelector('.item-unit-input').value = opt.dataset.unit || 'pcs';
+    const id = row.id.replace('item-', '');
+    recalcItem(id);
+  }
+
+  function recalcItem(id) {
+    const row = document.getElementById('item-' + id);
+    if (!row) return;
+    const qty = parseFloat(row.querySelector('.item-qty-input').value) || 0;
+    const price = parseFloat(row.querySelector('.item-price-input').value) || 0;
+    const sub = qty * price;
+    document.getElementById('sub-' + id).textContent = formatCurrency(sub);
+    recalcTotal();
+  }
+
+  function recalcTotal() {
+    let total = 0;
+    document.querySelectorAll('.item-row').forEach(row => {
+      const qty = parseFloat(row.querySelector('.item-qty-input')?.value) || 0;
+      const price = parseFloat(row.querySelector('.item-price-input')?.value) || 0;
+      total += qty * price;
+    });
+    document.getElementById('t-subtotal').textContent = formatCurrency(total);
+    document.getElementById('t-total').textContent = formatCurrency(total);
+  }
+
+  async function submitInvoice() {
+    const btn = document.getElementById('btn-submit');
+    const customerId = document.getElementById('inv-customer').value;
+    const date = document.getElementById('inv-date').value;
+    const term = document.getElementById('inv-term').value;
+    const notes = document.getElementById('inv-notes').value.trim();
+
+    if (!customerId) { showToast('Pilih customer terlebih dahulu', 'error'); return; }
+    if (!date) { showToast('Isi tanggal faktur', 'error'); return; }
+
+    const rows = document.querySelectorAll('.item-row');
+    const items = [];
+    for (const row of rows) {
+      const sel = row.querySelector('.item-product-sel');
+      const qty = parseFloat(row.querySelector('.item-qty-input').value) || 0;
+      const price = parseFloat(row.querySelector('.item-price-input').value) || 0;
+      if (!sel.value) continue;
+      if (qty <= 0) { showToast('Qty harus lebih dari 0', 'error'); return; }
+      const opt = sel.options[sel.selectedIndex];
+      const stock = parseFloat(opt.dataset.stock) || 0;
+      if (qty > stock) { showToast(`Stok ${opt.text.split(' (')[0]} tidak cukup (stok: ${stock})`, 'error'); return; }
+      items.push({
+        product_id: sel.value,
+        quantity: qty,
+        unit_price: price,
+        subtotal: qty * price,
+        cost_price: parseFloat(opt.dataset.cost) || 0
+      });
+    }
+
+    if (!items.length) { showToast('Tambah minimal 1 produk', 'error'); return; }
+
+    const customer = customers.find(c => c.id === customerId);
+    const total = items.reduce((s, i) => s + i.subtotal, 0);
+
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    const { data: inv, error: invErr } = await supabase.from('invoices').insert({
+      invoice_date: date,
+      customer_id: customerId,
+      store_name: customer?.store_name || customer?.name || '',
+      payment_term: term,
+      price_mode: priceMode,
+      total_amount: total,
+      status: 'pending',
+      notes: notes || null,
+      created_by_id: currentUser.session.user.id,
+      sales_name: currentUser.profile.name,
+      verification_status: 'pending'
+    }).select().single();
+
+    if (invErr) { showToast('Gagal: ' + invErr.message, 'error'); btn.disabled = false; btn.textContent = 'Kirim Faktur'; return; }
+
+    const itemsPayload = items.map(it => ({ ...it, invoice_id: inv.id }));
+    const { error: itemsErr } = await supabase.from('invoice_items').insert(itemsPayload);
+
+    if (itemsErr) {
+      await supabase.from('invoices').delete().eq('id', inv.id);
+      showToast('Gagal simpan items: ' + itemsErr.message, 'error');
+      btn.disabled = false; btn.textContent = 'Kirim Faktur';
+      return;
+    }
+
+    showToast('Faktur berhasil dikirim! Menunggu verifikasi admin.');
+    btn.disabled = false;
+    btn.textContent = 'Kirim Faktur';
+
+    // reset form
+    document.getElementById('inv-customer').value = '';
+    document.getElementById('inv-notes').value = '';
+    document.getElementById('items-list').innerHTML = '';
+    itemCount = 0;
+    addItem();
+    recalcTotal();
+
+    await loadHistory();
+    switchTab('tab-history');
+  }
+
+  function switchTab(id) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.tab-btn')[id === 'tab-new' ? 0 : 1].classList.add('active');
+    if (id === 'tab-history') loadHistory();
+  }
+
+  function openModal(id) { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  async function doSignOut() {
+    await supabase.auth.signOut();
+    window.location.href = 'login.html';
+  }
+
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); });
+  });
+
+  init();
+</script>
+</body>
+</html>

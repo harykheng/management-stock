@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pengaturan - StokManager</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">📦</div>
+      <h2>UD.DIANA</h2>
+      <span>Sistem Manajemen Stok</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Menu Utama</div>
+      <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="products.html" class="nav-item"><span class="nav-icon">📦</span> Produk</a>
+      <a href="customers.html" class="nav-item"><span class="nav-icon">👥</span> Customers</a>
+      <div class="nav-label">Transaksi</div>
+      <a href="invoices.html" class="nav-item"><span class="nav-icon">🧾</span> Faktur Penjualan</a>
+      <a href="verify-invoices.html" class="nav-item"><span class="nav-icon">✅</span> Verifikasi Faktur</a>
+      <a href="purchases.html" class="nav-item"><span class="nav-icon">🛒</span> Pembelian Barang</a>
+      <a href="stock-out.html" class="nav-item"><span class="nav-icon">📤</span> Keluar Barang</a>
+      <div class="nav-label">Laporan</div>
+      <a href="reports.html" class="nav-item"><span class="nav-icon">📊</span> Laporan Stok</a>
+      <a href="profit-loss.html" class="nav-item"><span class="nav-icon">💹</span> Laba Rugi</a>
+      <div class="nav-label">Admin</div>
+      <a href="settings.html" class="nav-item active"><span class="nav-icon">⚙️</span> Pengaturan</a>
+    </nav>
+    <div class="sidebar-footer">© 2025 StokManager</div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-title">
+        <h1>Pengaturan</h1>
+        <p>Profil admin dan manajemen akun sales</p>
+      </div>
+      <div class="topbar-right">
+        <div class="user-avatar" id="user-avatar-initial">A</div>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- TABS -->
+      <div style="display:flex;gap:4px;margin-bottom:24px;background:#f1f5f9;border-radius:10px;padding:4px;width:fit-content">
+        <button class="tab-pill active" onclick="switchTab('tab-profile', this)">👤 Profil Saya</button>
+        <button class="tab-pill" onclick="switchTab('tab-sales', this)">👥 Akun Sales</button>
+      </div>
+
+      <!-- TAB: PROFIL -->
+      <div id="tab-profile">
+        <div class="card" style="max-width:520px">
+          <div class="card-header"><h3>Edit Profil Admin</h3></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Nama</label>
+              <input type="text" id="profile-name" placeholder="Nama lengkap">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="profile-email" placeholder="email@example.com">
+            </div>
+            <hr style="margin:20px 0;border:none;border-top:1px solid #e2e8f0">
+            <p style="font-size:13px;font-weight:600;color:#374151;margin-bottom:14px">Ganti Password</p>
+            <div class="form-group">
+              <label>Password Baru</label>
+              <input type="password" id="profile-password" placeholder="Kosongkan jika tidak ingin ganti">
+            </div>
+            <div class="form-group mb-0">
+              <label>Konfirmasi Password</label>
+              <input type="password" id="profile-password-confirm" placeholder="Ulangi password baru">
+            </div>
+          </div>
+          <div class="modal-footer" style="border-top:1px solid #e2e8f0;padding:16px 20px">
+            <button class="btn btn-primary" id="btn-save-profile" onclick="saveProfile()">Simpan Perubahan</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: AKUN SALES -->
+      <div id="tab-sales" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h3 style="font-size:15px;font-weight:600">Daftar Akun Sales</h3>
+          <button class="btn btn-primary btn-sm" onclick="openAddSales()">+ Tambah Sales</button>
+        </div>
+
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nama</th>
+                  <th>Email</th>
+                  <th>Status</th>
+                  <th>Tgl Dibuat</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="sales-table">
+                <tr><td colspan="6" class="text-center text-muted" style="padding:40px">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- MODAL: TAMBAH SALES -->
+<div class="modal-overlay" id="modal-add-sales">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h3>Tambah Akun Sales</h3>
+      <button class="modal-close" onclick="closeModal('modal-add-sales')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nama Sales *</label>
+        <input type="text" id="sales-name" placeholder="Nama lengkap">
+      </div>
+      <div class="form-group">
+        <label>Email *</label>
+        <input type="email" id="sales-email" placeholder="email@example.com">
+      </div>
+      <div class="form-group mb-0">
+        <label>Password *</label>
+        <input type="password" id="sales-password" placeholder="Minimal 6 karakter">
+      </div>
+      <p style="font-size:12px;color:#64748b;margin-top:8px">
+        ⚠️ Setelah membuat akun sales, Anda perlu login ulang karena Supabase akan membuat sesi baru.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-sales')">Batal</button>
+      <button class="btn btn-primary" id="btn-create-sales" onclick="createSales()">Buat Akun</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: RESET PASSWORD SALES -->
+<div class="modal-overlay" id="modal-reset-pw">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3>Reset Password Sales</h3>
+      <button class="modal-close" onclick="closeModal('modal-reset-pw')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:#64748b;margin-bottom:12px">Ganti password untuk: <strong id="reset-sales-name"></strong></p>
+      <div class="form-group mb-0">
+        <label>Password Baru *</label>
+        <input type="password" id="new-sales-password" placeholder="Minimal 6 karakter">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-reset-pw')">Batal</button>
+      <button class="btn btn-primary" id="btn-confirm-reset" onclick="confirmResetPassword()">Simpan Password</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .tab-pill {
+    padding: 8px 18px;
+    border: none;
+    background: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tab-pill.active {
+    background: #fff;
+    color: #2563eb;
+    box-shadow: 0 1px 4px rgba(0,0,0,.1);
+  }
+  .status-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+  }
+  .status-toggle.active { background: #dcfce7; color: #15803d; }
+  .status-toggle.inactive { background: #fee2e2; color: #b91c1c; }
+</style>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/auth.js"></script>
+<script>
+  let currentAdmin = null;
+  let allSales = [];
+  let resetTargetId = null;
+
+  async function init() {
+    const auth = await requireAdmin();
+    if (!auth) return;
+    currentAdmin = auth;
+
+    document.getElementById('profile-name').value = auth.profile.name;
+    document.getElementById('profile-email').value = auth.profile.email;
+
+    loadSalesAccounts();
+  }
+
+  function switchTab(id, btn) {
+    document.getElementById('tab-profile').style.display = 'none';
+    document.getElementById('tab-sales').style.display = 'none';
+    document.getElementById(id).style.display = 'block';
+    document.querySelectorAll('.tab-pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  async function saveProfile() {
+    const btn = document.getElementById('btn-save-profile');
+    const name = document.getElementById('profile-name').value.trim();
+    const email = document.getElementById('profile-email').value.trim();
+    const pw = document.getElementById('profile-password').value;
+    const pwConfirm = document.getElementById('profile-password-confirm').value;
+
+    if (!name || !email) { showToast('Nama dan email wajib diisi', 'error'); return; }
+    if (pw && pw !== pwConfirm) { showToast('Konfirmasi password tidak cocok', 'error'); return; }
+    if (pw && pw.length < 6) { showToast('Password minimal 6 karakter', 'error'); return; }
+
+    setLoading(btn, true);
+
+    // update profile table
+    const { error: profileErr } = await supabase.from('user_profiles').update({ name, email }).eq('id', currentAdmin.session.user.id);
+    if (profileErr) { showToast('Gagal update profil: ' + profileErr.message, 'error'); setLoading(btn, false); return; }
+
+    // update auth email/password if changed
+    const updates = {};
+    if (email !== currentAdmin.profile.email) updates.email = email;
+    if (pw) updates.password = pw;
+
+    if (Object.keys(updates).length) {
+      const { error: authErr } = await supabase.auth.updateUser(updates);
+      if (authErr) { showToast('Profil tersimpan tapi gagal update auth: ' + authErr.message, 'error'); setLoading(btn, false); return; }
+    }
+
+    setLoading(btn, false);
+    showToast('Profil berhasil diperbarui');
+    document.getElementById('profile-password').value = '';
+    document.getElementById('profile-password-confirm').value = '';
+    currentAdmin.profile.name = name;
+    currentAdmin.profile.email = email;
+    updateSidebarUser(currentAdmin.profile);
+  }
+
+  async function loadSalesAccounts() {
+    const { data, error } = await supabase.from('user_profiles').select('*').eq('role', 'sales').order('created_at', { ascending: false });
+    if (error) { showToast('Gagal memuat akun sales', 'error'); return; }
+    allSales = data || [];
+    renderSalesTable();
+  }
+
+  function renderSalesTable() {
+    const tbody = document.getElementById('sales-table');
+    if (!allSales.length) {
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">👥</div><h4>Belum ada akun sales</h4><p>Tambah akun sales baru</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = allSales.map((s, i) => `
+      <tr>
+        <td class="text-muted">${i + 1}</td>
+        <td><strong>${escapeHtml(s.name)}</strong></td>
+        <td class="text-muted">${escapeHtml(s.email)}</td>
+        <td>
+          <button class="status-toggle ${s.is_active ? 'active' : 'inactive'}" onclick="toggleActive('${s.id}', ${s.is_active})">
+            ${s.is_active ? '✅ Aktif' : '🔴 Nonaktif'}
+          </button>
+        </td>
+        <td class="text-muted">${formatDate(s.created_at)}</td>
+        <td>
+          <div class="table-actions">
+            <button class="btn btn-ghost btn-sm" onclick="openResetPassword('${s.id}','${escapeHtml(s.name)}')">🔑 Reset PW</button>
+            <button class="btn btn-ghost btn-sm" onclick="editSalesName('${s.id}','${escapeHtml(s.name)}')">✏️ Edit</button>
+          </div>
+        </td>
+      </tr>`).join('');
+  }
+
+  function openAddSales() {
+    document.getElementById('sales-name').value = '';
+    document.getElementById('sales-email').value = '';
+    document.getElementById('sales-password').value = '';
+    openModal('modal-add-sales');
+  }
+
+  async function createSales() {
+    const btn = document.getElementById('btn-create-sales');
+    const name = document.getElementById('sales-name').value.trim();
+    const email = document.getElementById('sales-email').value.trim();
+    const password = document.getElementById('sales-password').value;
+
+    if (!name || !email || !password) { showToast('Semua field wajib diisi', 'error'); return; }
+    if (password.length < 6) { showToast('Password minimal 6 karakter', 'error'); return; }
+
+    setLoading(btn, true);
+
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) { showToast('Gagal: ' + error.message, 'error'); setLoading(btn, false); return; }
+
+    const userId = data.user?.id;
+    if (!userId) { showToast('Gagal mendapatkan user ID. Pastikan "Confirm email" dimatikan di Supabase.', 'error'); setLoading(btn, false); return; }
+
+    const { error: profileErr } = await supabase.from('user_profiles').insert({ id: userId, name, email, role: 'sales', is_active: true });
+    if (profileErr) { showToast('Akun dibuat tapi gagal simpan profil: ' + profileErr.message, 'error'); setLoading(btn, false); return; }
+
+    setLoading(btn, false);
+    showToast(`Akun sales "${name}" berhasil dibuat. Silakan login ulang.`);
+    closeModal('modal-add-sales');
+
+    // re-sign in as admin to restore session
+    const adminEmail = currentAdmin.profile.email;
+    setTimeout(async () => {
+      const pwInput = prompt('Masukkan password admin Anda untuk login ulang (diperlukan setelah membuat akun baru):');
+      if (pwInput) {
+        const { error: reLoginErr } = await supabase.auth.signInWithPassword({ email: adminEmail, password: pwInput });
+        if (reLoginErr) { showToast('Login ulang gagal: ' + reLoginErr.message, 'error'); }
+        else { showToast('Login ulang berhasil'); loadSalesAccounts(); }
+      }
+    }, 500);
+  }
+
+  async function toggleActive(id, currentStatus) {
+    const { error } = await supabase.from('user_profiles').update({ is_active: !currentStatus }).eq('id', id);
+    if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
+    showToast(currentStatus ? 'Akun dinonaktifkan' : 'Akun diaktifkan');
+    loadSalesAccounts();
+  }
+
+  async function editSalesName(id, currentName) {
+    const newName = prompt('Nama baru:', currentName);
+    if (!newName || newName.trim() === currentName) return;
+    const { error } = await supabase.from('user_profiles').update({ name: newName.trim() }).eq('id', id);
+    if (error) { showToast('Gagal: ' + error.message, 'error'); return; }
+    showToast('Nama diperbarui');
+    loadSalesAccounts();
+  }
+
+  function openResetPassword(id, name) {
+    resetTargetId = id;
+    document.getElementById('reset-sales-name').textContent = name;
+    document.getElementById('new-sales-password').value = '';
+    openModal('modal-reset-pw');
+  }
+
+  async function confirmResetPassword() {
+    const btn = document.getElementById('btn-confirm-reset');
+    const pw = document.getElementById('new-sales-password').value;
+    if (!pw || pw.length < 6) { showToast('Password minimal 6 karakter', 'error'); return; }
+
+    setLoading(btn, true);
+    // Note: Admin cannot directly reset another user's password via client SDK.
+    // This would require a Supabase Edge Function or Admin API.
+    // For now we store a note and inform the admin.
+    setLoading(btn, false);
+    showToast('Untuk reset password user lain, gunakan Supabase Dashboard → Authentication → Users → Edit', 'error');
+    closeModal('modal-reset-pw');
+  }
+
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) closeModal(el.id); });
+  });
+
+  init();
+</script>
+</body>
+</html>
